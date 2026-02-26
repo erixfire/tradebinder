@@ -1,0 +1,30 @@
+# Cloudflare Pages Configuration for TradeBinder
+name = "tradebinder"
+compatibility_date = "2026-02-26"
+
+# Build configuration
+[build]
+command = "npm run build"
+cwd = "."
+watch_dir = "src"
+
+[build.upload]
+format = "directory"
+dir = "dist"
+main = "./dist"
+modules = true
+
+# Environment variables for Pages
+[env.production.vars]
+ENVIRONMENT = "production"
+API_URL = "https://tradebinder-api.YOUR-ACCOUNT.workers.dev"
+SCRYFALL_API_URL = "https://api.scryfall.com"
+
+[env.preview.vars]
+ENVIRONMENT = "preview"
+API_URL = "https://tradebinder-api-preview.YOUR-ACCOUNT.workers.dev"
+
+# Custom routes (optional)
+# [[routes]]
+# pattern = "/api/*"
+# custom_origin = "tradebinder-api.YOUR-ACCOUNT.workers.dev"

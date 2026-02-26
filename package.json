@@ -1,18 +1,28 @@
 {
   "name": "tradebinder",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
+  "description": "MTG Card Trading Platform for the Philippines",
+  "author": "Ericson Carganillo <erix.due@gmail.com>",
+  "license": "Private",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "deploy": "wrangler pages deploy dist",
+    "deploy": "npm run build && wrangler pages deploy dist --project-name=tradebinder",
+    "deploy:full": "npm run build && npm run deploy && npm run worker:deploy",
     "worker:dev": "wrangler dev",
     "worker:deploy": "wrangler deploy",
+    "worker:deploy:production": "wrangler deploy --config wrangler.production.toml",
     "db:migrate": "wrangler d1 execute tradebinder-db --local --file=./db/schema.sql",
     "db:migrate:remote": "wrangler d1 execute tradebinder-db --remote --file=./db/schema.sql",
-    "db:seed": "wrangler d1 execute tradebinder-db --local --file=./db/seed.sql"
+    "db:migrate:production": "wrangler d1 execute tradebinder-db-production --remote --file=./db/schema.sql",
+    "db:seed": "wrangler d1 execute tradebinder-db --local --file=./db/seed.sql",
+    "db:seed:remote": "wrangler d1 execute tradebinder-db --remote --file=./db/seed.sql",
+    "db:backup": "wrangler d1 export tradebinder-db-production --remote --output=backup-$(date +%Y%m%d).sql",
+    "logs": "wrangler tail tradebinder-api",
+    "logs:production": "wrangler tail tradebinder-api --env production"
   },
   "dependencies": {
     "react": "^18.3.1",
@@ -25,8 +35,15 @@
     "@types/react": "^18.2.55",
     "@types/react-dom": "^18.2.19",
     "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.10",
+    "typescript": "^5.3.3",
     "vite": "^5.1.0",
-    "wrangler": "^3.28.0",
-    "typescript": "^5.3.3"
+    "wrangler": "^3.114.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
   }
 }

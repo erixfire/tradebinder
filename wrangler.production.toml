@@ -1,0 +1,54 @@
+# Production Cloudflare Workers Configuration
+name = "tradebinder-api"
+main = "worker/index.ts"
+compatibility_date = "2026-02-26"
+
+# ============================================
+# PRODUCTION D1 DATABASE
+# ============================================
+# After local setup works, create production database:
+# npx wrangler d1 create tradebinder-db-production
+# Then paste the database_id below
+
+[[d1_databases]]
+binding = "DB"
+database_name = "tradebinder-db-production"
+database_id = ""  # <-- PASTE PRODUCTION D1 DATABASE_ID HERE
+
+# ============================================
+# PRODUCTION KV CACHE
+# ============================================
+# Create production KV:
+# npx wrangler kv:namespace create "TRADEBINDER-CACHE" --env production
+# Then paste the id below
+
+[[kv_namespaces]]
+binding = "CACHE"
+id = ""  # <-- PASTE PRODUCTION KV ID HERE
+
+# ============================================
+# PRODUCTION ENVIRONMENT VARIABLES
+# ============================================
+# Set these in Cloudflare Dashboard → Workers → Settings → Variables
+# DO NOT commit secrets to git!
+
+[vars]
+ENVIRONMENT = "production"
+SCRYFALL_API_URL = "https://api.scryfall.com"
+# JWT_SECRET - Set this in Cloudflare Dashboard (Encrypt)
+# GCASH_API_KEY - Set in Cloudflare Dashboard
+# PAYMAYA_PUBLIC_KEY - Set in Cloudflare Dashboard
+# PAYMAYA_SECRET_KEY - Set in Cloudflare Dashboard
+
+# ============================================
+# PRODUCTION ROUTES (Custom Domain)
+# ============================================
+# [[routes]]
+# pattern = "api.tradebinder.com/*"
+# zone_name = "tradebinder.com"
+
+# ============================================
+# PRODUCTION TRIGGERS (Cron Jobs)
+# ============================================
+# [triggers]
+# crons = ["0 2 * * *"]  # Daily at 2 AM - price sync

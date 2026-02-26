@@ -1,0 +1,30 @@
+{
+  "$schema": "https://developers.cloudflare.com/pages/platform/build-configuration",
+  "production_branch": "main",
+  "build": {
+    "command": "npm run build",
+    "cwd": ".",
+    "destination_dir": "dist",
+    "root_dir": ".",
+    "watch_paths": [
+      "src/**",
+      "public/**",
+      "index.html",
+      "vite.config.ts",
+      "package.json"
+    ]
+  },
+  "preview": {
+    "command": "npm run build",
+    "destination_dir": "dist"
+  },
+  "deployments": {
+    "production": {
+      "compatibility_date": "2026-02-26",
+      "compatibility_flags": ["nodejs_compat"]
+    },
+    "preview": {
+      "compatibility_date": "2026-02-26"
+    }
+  }
+}
