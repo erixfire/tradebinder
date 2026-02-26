@@ -1,26 +1,36 @@
 name = "tradebinder-api"
 main = "worker/index.ts"
-compatibility_date = "2024-01-01"
+compatibility_date = "2026-02-26"
 
-# D1 Database binding
+# ============================================
+# CLOUDFLARE D1 DATABASE
+# ============================================
+# Run: npx wrangler d1 create tradebinder-db
+# Then paste the database_id below
+
 [[d1_databases]]
 binding = "DB"
 database_name = "tradebinder-db"
-database_id = "" # Add after creating D1 database
+database_id = ""  # <-- PASTE YOUR D1 DATABASE ID HERE
 
-# KV for caching
+# ============================================
+# CLOUDFLARE KV CACHE
+# ============================================
+# Run: npx wrangler kv:namespace create "TRADEBINDER-CACHE"
+# Then paste the id below
+
 [[kv_namespaces]]
 binding = "CACHE"
-id = "" # Add after creating KV namespace
+id = ""  # <-- PASTE YOUR KV NAMESPACE ID HERE
 
-# Environment variables
+# ============================================
+# ENVIRONMENT VARIABLES
+# ============================================
 [vars]
 ENVIRONMENT = "development"
-JWT_SECRET = "" # Generate secure secret
+JWT_SECRET = "65de7410be32309fba0e6ad8df62be4aa33d639e7a7ea40394a80bf375730e6f"  # Change for production
 SCRYFALL_API_URL = "https://api.scryfall.com"
 
-# CORS settings
-[cors]
-allowed_origins = ["*"]
-allowed_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
-allowed_headers = ["Content-Type", "Authorization"]
+# ============================================
+# CORS is handled in worker code, not here
+# ============================================
