@@ -16,6 +16,12 @@
     radial-gradient(circle at 20% 30%, rgba(138, 43, 226, 0.15) 0%, transparent 50%),
     radial-gradient(circle at 80% 70%, rgba(0, 191, 255, 0.15) 0%, transparent 50%);
   pointer-events: none;
+  animation: backgroundShift 20s ease-in-out infinite;
+}
+
+@keyframes backgroundShift {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.8; }
 }
 
 .loading-container {
@@ -47,7 +53,7 @@
 }
 
 .page-header {
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(20px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   padding: 30px 0;
@@ -85,8 +91,8 @@
   padding: 20px;
   background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(20px);
+  border: 1px solid rgba(138, 43, 226, 0.3);
   border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
   color: white;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
   transition: all 0.3s;
@@ -94,12 +100,13 @@
 
 .stat-card:hover {
   transform: translateY(-4px);
-  border-color: rgba(138, 43, 226, 0.5);
+  border-color: rgba(138, 43, 226, 0.6);
   box-shadow: 0 12px 40px rgba(138, 43, 226, 0.4);
 }
 
 .stat-icon {
   font-size: 36px;
+  opacity: 0.9;
 }
 
 .stat-label {
@@ -143,6 +150,7 @@
   transform: translateY(-50%);
   font-size: 18px;
   color: rgba(255, 255, 255, 0.4);
+  z-index: 2;
 }
 
 .search-box input {
@@ -155,6 +163,7 @@
   font-size: 15px;
   color: white;
   transition: all 0.3s;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 .search-box input::placeholder {
@@ -163,9 +172,9 @@
 
 .search-box input:focus {
   outline: none;
-  border-color: rgba(138, 43, 226, 0.6);
-  box-shadow: 0 4px 20px rgba(138, 43, 226, 0.3);
   background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(138, 43, 226, 0.6);
+  box-shadow: 0 4px 30px rgba(138, 43, 226, 0.3);
 }
 
 .filter-buttons {
@@ -176,9 +185,9 @@
 
 .filter-buttons button {
   padding: 12px 20px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 10px;
   font-size: 14px;
   font-weight: 600;
@@ -188,8 +197,8 @@
 }
 
 .filter-buttons button:hover {
-  border-color: rgba(138, 43, 226, 0.5);
   background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(138, 43, 226, 0.5);
   color: white;
   transform: translateY(-1px);
 }
@@ -198,7 +207,7 @@
   background: linear-gradient(135deg, rgba(138, 43, 226, 0.3), rgba(0, 191, 255, 0.3));
   color: white;
   border-color: rgba(138, 43, 226, 0.6);
-  box-shadow: 0 4px 12px rgba(138, 43, 226, 0.3);
+  box-shadow: 0 4px 12px rgba(138, 43, 226, 0.4);
 }
 
 .inventory-grid {
@@ -213,12 +222,29 @@
   border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-  transition: all 0.4s;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid rgba(255, 255, 255, 0.1);
+  position: relative;
+}
+
+.card-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(138, 43, 226, 0.8), transparent);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.card-item:hover::before {
+  opacity: 1;
 }
 
 .card-item:hover {
-  transform: translateY(-8px);
+  transform: translateY(-8px) scale(1.02);
   border-color: rgba(138, 43, 226, 0.5);
   box-shadow: 0 16px 48px rgba(138, 43, 226, 0.4);
 }
@@ -272,7 +298,7 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   backdrop-filter: blur(10px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   border: 1px solid;
 }
 
@@ -292,14 +318,14 @@
   background: rgba(255, 215, 0, 0.3);
   border-color: rgba(255, 215, 0, 0.5);
   color: gold;
-  box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.4);
 }
 
 .rarity-badge[data-rarity="mythic"] {
   background: rgba(255, 69, 0, 0.3);
   border-color: rgba(255, 69, 0, 0.5);
   color: #ff4500;
-  box-shadow: 0 0 10px rgba(255, 69, 0, 0.5);
+  box-shadow: 0 0 10px rgba(255, 69, 0, 0.4);
 }
 
 .card-details {
@@ -316,7 +342,7 @@
 
 .mana-cost {
   font-size: 13px;
-  color: #00bfff;
+  color: #8a2be2;
   font-weight: 600;
   margin: 0 0 8px 0;
 }
@@ -339,12 +365,11 @@
   border-radius: 6px;
   font-size: 12px;
   font-weight: 600;
-  backdrop-filter: blur(10px);
 }
 
 .set-badge {
   background: rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(255, 255, 255, 0.7);
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
@@ -383,8 +408,8 @@
 .condition-badge {
   padding: 4px 10px;
   background: rgba(0, 255, 127, 0.2);
-  color: #00ff7f;
   border: 1px solid rgba(0, 255, 127, 0.4);
+  color: #00ff7f;
   border-radius: 6px;
   font-size: 12px;
 }
