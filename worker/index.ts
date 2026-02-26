@@ -59,6 +59,11 @@ export default {
         return handleGetInventory(request, env, corsHeaders);
       }
 
+      // CSV Import route
+      if (path === '/api/inventory/import' && method === 'POST') {
+        return handleInventoryImport(request, env, corsHeaders);
+      }
+
       if (path === '/api/cards' && method === 'GET') {
         return handleGetCards(request, env, corsHeaders);
       }
@@ -185,6 +190,208 @@ async function handleRegister(request: Request, env: Env, corsHeaders: Record<st
 }
 
 // ============================================
+// CSV IMPORT HANDLER
+// ============================================
+
+async function handleInventoryImport(request: Request, env: Env, corsHeaders: Record<string, string>): Promise<Response> {
+  try {
+    // Auth check
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader) {
+      return jsonResponse({ error: 'Unauthorized' }, corsHeaders, 401);
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    let user: JWTPayload;
+    try {
+      user = JSON.parse(atob(token)) as JWTPayload;
+      if (user.exp < Date.now()) {
+        return jsonResponse({ error: 'Token expired' }, corsHeaders, 401);
+      }
+      if (user.role !== 'admin' && user.role !== 'staff') {
+        return jsonResponse({ error: 'Forbidden: Admin or staff role required' }, corsHeaders, 403);
+      }
+    } catch {
+      return jsonResponse({ error: 'Invalid token' }, corsHeaders, 401);
+    }
+
+    // Get file from form data
+    const formData = await request.formData();
+    const file = formData.get('file');
+    
+    if (!file || !(file instanceof File)) {
+      return jsonResponse({ error: 'CSV file is required' }, corsHeaders, 400);
+    }
+
+    if (!file.name.endsWith('.csv')) {
+      return jsonResponse({ error: 'Only .csv files are allowed' }, corsHeaders, 400);
+    }
+
+    const text = await file.text();
+    const lines = text.split('\n').filter(line => line.trim());
+
+    if (lines.length < 2) {
+      return jsonResponse({ error: 'CSV file is empty or invalid' }, corsHeaders, 400);
+    }
+
+    // Parse CSV header
+    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+    
+    // Map ManaBox columns
+    const nameIdx = headers.indexOf('name');
+    const setCodeIdx = headers.indexOf('set code');
+    const setNameIdx = headers.indexOf('set name');
+    const collectorNumberIdx = headers.indexOf('collector number');
+    const foilIdx = headers.indexOf('foil');
+    const rarityIdx = headers.indexOf('rarity');
+    const quantityIdx = headers.indexOf('quantity');
+    const scryfallIdIdx = headers.indexOf('scryfall id');
+    const purchasePriceIdx = headers.indexOf('purchase price');
+    const conditionIdx = headers.indexOf('condition');
+    const languageIdx = headers.indexOf('language');
+
+    // Validate required columns
+    if (nameIdx === -1 || setCodeIdx === -1 || scryfallIdIdx === -1 || quantityIdx === -1 || conditionIdx === -1) {
+      return jsonResponse({ 
+        error: 'Missing required columns. Need: Name, Set code, Scryfall ID, Quantity, Condition' 
+      }, corsHeaders, 400);
+    }
+
+    const results = {
+      total: lines.length - 1,
+      inserted: 0,
+      updated: 0,
+      skipped: 0,
+      errors: [] as { row: number; message: string }[]
+    };
+
+    // Process each row
+    for (let i = 1; i < lines.length; i++) {
+      try {
+        const line = lines[i];
+        const cols = parseCSVLine(line);
+
+        if (cols.length < headers.length) {
+          results.errors.push({ row: i + 1, message: 'Incomplete row' });
+          results.skipped++;
+          continue;
+        }
+
+        const name = cols[nameIdx]?.trim();
+        const setCode = cols[setCodeIdx]?.trim();
+        const setName = setNameIdx >= 0 ? cols[setNameIdx]?.trim() : '';
+        const collectorNumber = collectorNumberIdx >= 0 ? cols[collectorNumberIdx]?.trim() : '';
+        const foil = foilIdx >= 0 ? cols[foilIdx]?.trim().toLowerCase() : 'normal';
+        const rarity = rarityIdx >= 0 ? cols[rarityIdx]?.trim().toLowerCase() : 'common';
+        const quantity = parseInt(cols[quantityIdx] || '0');
+        const scryfallId = cols[scryfallIdIdx]?.trim();
+        const purchasePrice = purchasePriceIdx >= 0 ? parseFloat(cols[purchasePriceIdx] || '0') : 0;
+        const condition = cols[conditionIdx]?.trim().toLowerCase().replace('_', ' ');
+        const language = languageIdx >= 0 ? cols[languageIdx]?.trim().toLowerCase() : 'en';
+
+        if (!name || !setCode || !scryfallId || !quantity || quantity <= 0) {
+          results.errors.push({ row: i + 1, message: 'Missing required fields or invalid quantity' });
+          results.skipped++;
+          continue;
+        }
+
+        // Map ManaBox condition to TradeBinder format
+        let mappedCondition = 'NM';
+        if (condition.includes('near')) mappedCondition = 'NM';
+        else if (condition.includes('light')) mappedCondition = 'LP';
+        else if (condition.includes('moderate')) mappedCondition = 'MP';
+        else if (condition.includes('heavy')) mappedCondition = 'HP';
+        else if (condition.includes('damage')) mappedCondition = 'DMG';
+
+        // Calculate sell price (1.5x purchase price, converted to PHP)
+        const phpRate = 56.0; // USD to PHP rate (adjust as needed)
+        const costPricePhp = purchasePrice * phpRate;
+        const sellPricePhp = Math.ceil(costPricePhp * 1.5);
+
+        // Check if card exists
+        let cardResult = await env.DB.prepare(
+          'SELECT id FROM cards WHERE scryfall_id = ?'
+        ).bind(scryfallId).first<{ id: number }>();
+
+        let cardId: number;
+
+        if (!cardResult) {
+          // Insert new card
+          const insertCard = await env.DB.prepare(
+            `INSERT INTO cards (scryfall_id, name, set_code, set_name, collector_number, rarity) 
+             VALUES (?, ?, ?, ?, ?, ?)`
+          ).bind(scryfallId, name, setCode, setName, collectorNumber, rarity).run();
+          
+          cardId = insertCard.meta.last_row_id as number;
+        } else {
+          cardId = cardResult.id;
+        }
+
+        // Check if inventory entry exists for this card + condition + foil
+        const existingInventory = await env.DB.prepare(
+          `SELECT id, quantity FROM inventory 
+           WHERE card_id = ? AND condition = ? AND language = ?`
+        ).bind(cardId, mappedCondition, language).first<{ id: number; quantity: number }>();
+
+        if (existingInventory) {
+          // Update existing inventory
+          const newQty = existingInventory.quantity + quantity;
+          await env.DB.prepare(
+            `UPDATE inventory 
+             SET quantity = ?, sell_price = ?, cost_price = ?, updated_at = CURRENT_TIMESTAMP
+             WHERE id = ?`
+          ).bind(newQty, sellPricePhp, costPricePhp, existingInventory.id).run();
+          results.updated++;
+        } else {
+          // Insert new inventory entry
+          await env.DB.prepare(
+            `INSERT INTO inventory (card_id, condition, language, quantity, cost_price, sell_price)
+             VALUES (?, ?, ?, ?, ?, ?)`
+          ).bind(cardId, mappedCondition, language, quantity, costPricePhp, sellPricePhp).run();
+          results.inserted++;
+        }
+      } catch (error) {
+        results.errors.push({ 
+          row: i + 1, 
+          message: error instanceof Error ? error.message : 'Unknown error' 
+        });
+        results.skipped++;
+      }
+    }
+
+    return jsonResponse(results, corsHeaders);
+  } catch (error) {
+    return jsonResponse({ 
+      error: 'Import failed', 
+      message: error instanceof Error ? error.message : String(error) 
+    }, corsHeaders, 500);
+  }
+}
+
+// Helper to parse CSV line with proper quote handling
+function parseCSVLine(line: string): string[] {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    
+    if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === ',' && !inQuotes) {
+      result.push(current);
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  result.push(current);
+  
+  return result;
+}
+
+// ============================================
 // INVENTORY HANDLERS
 // ============================================
 
@@ -196,7 +403,7 @@ async function handleGetInventory(request: Request, env: Env, corsHeaders: Recor
 
     const inventory = await env.DB.prepare(`
       SELECT 
-        i.id, i.quantity, i.condition, i.price_php,
+        i.id, i.quantity, i.condition, i.sell_price,
         c.name, c.mana_cost, c.type_line, c.oracle_text, c.power, c.toughness,
         c.colors, c.set_code, c.set_name, c.rarity, c.image_url
       FROM inventory i
