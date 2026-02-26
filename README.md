@@ -102,6 +102,7 @@ npm run db:migrate:remote
 ## Features
 
 - 🃏 **Inventory Management** - Add, update, and track MTG card inventory
+- 📥 **CSV Import** - Bulk import from ManaBox exports (NEW!)
 - 🛒 **POS System** - Quick search and checkout for in-store sales
 - 👤 **Customer Portal** - User accounts, order history, wishlists
 - 🔐 **Authentication** - JWT-based auth with role-based access
@@ -110,9 +111,27 @@ npm run db:migrate:remote
 - 💳 **Payment Integration** - PayMaya, GCash, PayPal support
 - 📱 **Mobile Responsive** - Optimized for Philippine mobile users
 
+## CSV Import
+
+Bulk import your MTG card collection from ManaBox:
+
+1. Export your collection from ManaBox as CSV
+2. Login as admin/staff
+3. Navigate to **Dashboard → Import CSV**
+4. Upload your CSV file
+5. Review import results
+
+**Supported columns:** Name, Set code, Scryfall ID, Quantity, Condition, Purchase price, Language, and more.
+
+See [CSV_IMPORT_GUIDE.md](./docs/CSV_IMPORT_GUIDE.md) for detailed instructions.
+
 ## API Endpoints
 
 See [API_DOCUMENTATION.md](./docs/API_DOCUMENTATION.md) for detailed endpoint specifications.
+
+### New Endpoint
+
+- `POST /api/inventory/import` - Bulk import inventory from CSV (admin/staff only)
 
 ## Database Schema
 
