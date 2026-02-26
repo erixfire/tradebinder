@@ -1,7 +1,7 @@
 /**
  * Cloudflare Workers API for TradeBinder
  * Complete MTG Card Trading Platform Backend
- * Updated: 2026-02-26 - D1 Database Configured
+ * Updated: 2026-02-26 - Fixed inventory query
  */
 
 export interface Env {
@@ -416,8 +416,8 @@ async function handleGetInventory(request: Request, env: Env, corsHeaders: Recor
     const inventory = await env.DB.prepare(`
       SELECT 
         i.id, i.quantity, i.condition, i.sell_price as price_php,
-        c.name, c.mana_cost, c.type_line, c.oracle_text, c.power, c.toughness,
-        c.colors, c.set_code, c.set_name, c.rarity, c.image_url
+        c.name, c.mana_cost, c.type_line, c.oracle_text,
+        c.set_code, c.set_name, c.rarity, c.image_url
       FROM inventory i
       JOIN cards c ON i.card_id = c.id
       WHERE i.quantity > 0
@@ -478,11 +478,11 @@ async function handleGetOrders(request: Request, env: Env, corsHeaders: Record<s
   try {
     const orders = await env.DB.prepare(`
       SELECT 
-        o.id, o.customer_id, o.order_date, o.total_amount, o.status, o.payment_method,
+        o.id, o.customer_id, o.created_at as order_date, o.total as total_amount, o.status, o.payment_method,
         c.first_name, c.last_name, c.email
       FROM orders o
       JOIN customers c ON o.customer_id = c.id
-      ORDER BY o.order_date DESC
+      ORDER BY o.created_at DESC
       LIMIT 50
     `).all();
 
@@ -500,18 +500,21 @@ async function handleCreateOrder(request: Request, env: Env, corsHeaders: Record
       return jsonResponse({ error: 'Missing required fields' }, corsHeaders, 400);
     }
 
+    // Generate order number
+    const orderNumber = `ORD-${Date.now()}`;
+
     // Create order
     const orderResult = await env.DB.prepare(
-      'INSERT INTO orders (customer_id, total_amount, payment_method, status) VALUES (?, ?, ?, ?)'
-    ).bind(customerId, totalAmount, paymentMethod || 'cash', 'pending').run();
+      'INSERT INTO orders (customer_id, order_number, subtotal, total, payment_method, status) VALUES (?, ?, ?, ?, ?, ?)'
+    ).bind(customerId, orderNumber, totalAmount, totalAmount, paymentMethod || 'cash', 'pending').run();
 
     const orderId = orderResult.meta.last_row_id;
 
     // Insert order items
     for (const item of items) {
       await env.DB.prepare(
-        'INSERT INTO order_items (order_id, inventory_id, quantity, price_php) VALUES (?, ?, ?, ?)'
-      ).bind(orderId, item.inventoryId, item.quantity, item.price).run();
+        'INSERT INTO order_items (order_id, inventory_id, quantity, unit_price, subtotal) VALUES (?, ?, ?, ?, ?)'
+      ).bind(orderId, item.inventoryId, item.quantity, item.price, item.price * item.quantity).run();
 
       // Update inventory
       await env.DB.prepare(
@@ -553,10 +556,10 @@ async function handleSalesReport(request: Request, env: Env, corsHeaders: Record
     const stats = await env.DB.prepare(`
       SELECT 
         COUNT(*) as total_orders,
-        SUM(total_amount) as total_sales,
-        AVG(total_amount) as average_order
+        SUM(total) as total_sales,
+        AVG(total) as average_order
       FROM orders
-      WHERE status = 'completed'
+      WHERE status = 'delivered'
     `).first();
 
     return jsonResponse({ stats }, corsHeaders);
