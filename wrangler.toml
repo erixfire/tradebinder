@@ -3,25 +3,16 @@ main = "worker/index.ts"
 compatibility_date = "2026-02-26"
 
 # ============================================
-# SETUP INSTRUCTIONS
-# ============================================
-# Run the automated setup script first:
-#   chmod +x setup.sh && ./setup.sh
-#
-# OR manually:
-#   1. npx wrangler d1 create tradebinder-db
-#   2. Paste database_id below
-#   3. npx wrangler kv:namespace create "TRADEBINDER-CACHE"
-#   4. Uncomment KV section at bottom and paste id
+# D1 DATABASE CONFIGURATION
 # ============================================
 
 [[d1_databases]]
 binding = "DB"
 database_name = "tradebinder-db"
-database_id = ""  # <-- PASTE YOUR D1 DATABASE_ID HERE
+database_id = "1d61e5ce-fd5a-4f29-92fb-cf449238baa0"
 
 # ============================================
-# KV NAMESPACE (Uncomment after creation)
+# KV NAMESPACE (Optional - for caching)
 # ============================================
 # After running: npx wrangler kv:namespace create "TRADEBINDER-CACHE"
 # Uncomment these 3 lines and paste your KV id:
