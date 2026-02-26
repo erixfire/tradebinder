@@ -3,6 +3,7 @@ import { useState } from 'react';
 import './App.css';
 import Inventory from './pages/Inventory';
 import POS from './pages/POS';
+import Trading from './pages/Trading';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787';
 
@@ -16,6 +17,7 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/inventory" element={<Inventory />} />
           <Route path="/pos" element={<POS />} />
+          <Route path="/trading" element={<Trading />} />
           <Route path="/customers" element={<CustomersPage />} />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
@@ -51,10 +53,10 @@ function LandingPage() {
             link="/pos"
           />
           <FeatureCard 
-            title="Customers" 
-            emoji="👥" 
-            description="Customer management"
-            link="/customers"
+            title="Trading" 
+            emoji="🔄" 
+            description="Trade with collectors"
+            link="/trading"
           />
           <FeatureCard 
             title="Reports" 
@@ -161,7 +163,7 @@ function Dashboard() {
         <nav className="dashboard-nav">
           <a href="/inventory">Inventory</a>
           <a href="/pos">POS</a>
-          <a href="/customers">Customers</a>
+          <a href="/trading">Trading</a>
           <a href="/reports">Reports</a>
           <a href="/">Logout</a>
         </nav>
@@ -170,7 +172,7 @@ function Dashboard() {
         <div className="stats-grid">
           <StatCard title="Total Cards" value="342" icon="🃏" />
           <StatCard title="Inventory Value" value="₱45,230" icon="💰" />
-          <StatCard title="Orders" value="127" icon="📦" />
+          <StatCard title="Trade Offers" value="3" icon="🔄" />
           <StatCard title="Customers" value="15" icon="👥" />
         </div>
       </main>
