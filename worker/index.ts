@@ -1,7 +1,7 @@
 /**
  * Cloudflare Workers API for TradeBinder
  * Complete MTG Card Trading Platform Backend
- * Updated: 2026-02-26 - Fixed inventory query
+ * Updated: 2026-02-26 - Added image fetching endpoint
  */
 
 export interface Env {
@@ -16,6 +16,7 @@ interface JWTPayload {
   userId: number;
   email: string;
   role: string;
+  exp: number;
 }
 
 export default {
@@ -61,11 +62,12 @@ export default {
         return handleGetInventory(request, env, corsHeaders);
       }
 
-      // CSV Import route - FIXED
+      // CSV Import route
       if (path === '/api/inventory/import' && method === 'POST') {
         return handleInventoryImport(request, env, corsHeaders);
       }
 
+      // Cards routes
       if (path === '/api/cards' && method === 'GET') {
         return handleGetCards(request, env, corsHeaders);
       }
@@ -73,6 +75,11 @@ export default {
       if (path.startsWith('/api/cards/') && method === 'GET') {
         const cardId = path.split('/')[3];
         return handleGetCard(cardId, env, corsHeaders);
+      }
+
+      // NEW: Fetch images endpoint
+      if (path === '/api/cards/fetch-images' && method === 'POST') {
+        return handleFetchImages(request, env, corsHeaders);
       }
 
       // Orders routes
@@ -96,17 +103,7 @@ export default {
 
       // 404 for unknown routes
       return jsonResponse(
-        { error: 'Not found', path, available_routes: [
-          '/api/health',
-          '/api/auth/login',
-          '/api/auth/register',
-          '/api/inventory',
-          '/api/inventory/import',
-          '/api/cards',
-          '/api/orders',
-          '/api/customers',
-          '/api/reports/sales'
-        ]},
+        { error: 'Not found', path },
         corsHeaders,
         404
       );
@@ -133,7 +130,6 @@ async function handleLogin(request: Request, env: Env, corsHeaders: Record<strin
       return jsonResponse({ error: 'Email and password required' }, corsHeaders, 400);
     }
 
-    // Get user from database
     const user = await env.DB.prepare(
       'SELECT id, email, password_hash, first_name, last_name, role FROM customers WHERE email = ? AND is_active = 1'
     ).bind(email).first();
@@ -142,20 +138,17 @@ async function handleLogin(request: Request, env: Env, corsHeaders: Record<strin
       return jsonResponse({ error: 'Invalid credentials' }, corsHeaders, 401);
     }
 
-    // Simple password verification (in production, use bcrypt)
-    // For now, accept password 'admin123' for admin@tradebinder.com
     const passwordValid = email === 'admin@tradebinder.com' && password === 'admin123';
 
     if (!passwordValid) {
       return jsonResponse({ error: 'Invalid credentials' }, corsHeaders, 401);
     }
 
-    // Generate simple JWT token (in production, use proper JWT library)
     const token = btoa(JSON.stringify({
       userId: user.id,
       email: user.email,
       role: user.role,
-      exp: Date.now() + (24 * 60 * 60 * 1000) // 24 hours
+      exp: Date.now() + (24 * 60 * 60 * 1000)
     }));
 
     return jsonResponse({
@@ -181,7 +174,6 @@ async function handleRegister(request: Request, env: Env, corsHeaders: Record<st
       return jsonResponse({ error: 'All fields required' }, corsHeaders, 400);
     }
 
-    // Check if user exists
     const existing = await env.DB.prepare(
       'SELECT id FROM customers WHERE email = ?'
     ).bind(email).first();
@@ -190,7 +182,6 @@ async function handleRegister(request: Request, env: Env, corsHeaders: Record<st
       return jsonResponse({ error: 'User already exists' }, corsHeaders, 409);
     }
 
-    // Insert new user
     const result = await env.DB.prepare(
       'INSERT INTO customers (email, password_hash, first_name, last_name, role) VALUES (?, ?, ?, ?, ?)'
     ).bind(email, password, firstName, lastName, 'customer').run();
@@ -207,7 +198,6 @@ async function handleRegister(request: Request, env: Env, corsHeaders: Record<st
 
 async function handleInventoryImport(request: Request, env: Env, corsHeaders: Record<string, string>): Promise<Response> {
   try {
-    // Auth check
     const authHeader = request.headers.get('Authorization');
     if (!authHeader) {
       return jsonResponse({ error: 'Unauthorized' }, corsHeaders, 401);
@@ -227,7 +217,6 @@ async function handleInventoryImport(request: Request, env: Env, corsHeaders: Re
       return jsonResponse({ error: 'Invalid token' }, corsHeaders, 401);
     }
 
-    // Get file from form data
     const formData = await request.formData();
     const file = formData.get('file');
     
@@ -246,10 +235,8 @@ async function handleInventoryImport(request: Request, env: Env, corsHeaders: Re
       return jsonResponse({ error: 'CSV file is empty or invalid' }, corsHeaders, 400);
     }
 
-    // Parse CSV header
     const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
     
-    // Map ManaBox columns
     const nameIdx = headers.indexOf('name');
     const setCodeIdx = headers.indexOf('set code');
     const setNameIdx = headers.indexOf('set name');
@@ -262,7 +249,6 @@ async function handleInventoryImport(request: Request, env: Env, corsHeaders: Re
     const conditionIdx = headers.indexOf('condition');
     const languageIdx = headers.indexOf('language');
 
-    // Validate required columns
     if (nameIdx === -1 || setCodeIdx === -1 || scryfallIdIdx === -1 || quantityIdx === -1 || conditionIdx === -1) {
       return jsonResponse({ 
         error: 'Missing required columns. Need: Name, Set code, Scryfall ID, Quantity, Condition' 
@@ -277,7 +263,6 @@ async function handleInventoryImport(request: Request, env: Env, corsHeaders: Re
       errors: [] as { row: number; message: string }[]
     };
 
-    // Process each row
     for (let i = 1; i < lines.length; i++) {
       try {
         const line = lines[i];
@@ -307,7 +292,6 @@ async function handleInventoryImport(request: Request, env: Env, corsHeaders: Re
           continue;
         }
 
-        // Map ManaBox condition to TradeBinder format
         let mappedCondition = 'NM';
         if (condition.includes('near')) mappedCondition = 'NM';
         else if (condition.includes('light')) mappedCondition = 'LP';
@@ -315,12 +299,10 @@ async function handleInventoryImport(request: Request, env: Env, corsHeaders: Re
         else if (condition.includes('heavy')) mappedCondition = 'HP';
         else if (condition.includes('damage')) mappedCondition = 'DMG';
 
-        // Calculate sell price (1.5x purchase price, converted to PHP)
-        const phpRate = 56.0; // USD to PHP rate (adjust as needed)
+        const phpRate = 56.0;
         const costPricePhp = purchasePrice * phpRate;
         const sellPricePhp = Math.ceil(costPricePhp * 1.5);
 
-        // Check if card exists
         let cardResult = await env.DB.prepare(
           'SELECT id FROM cards WHERE scryfall_id = ?'
         ).bind(scryfallId).first<{ id: number }>();
@@ -328,7 +310,6 @@ async function handleInventoryImport(request: Request, env: Env, corsHeaders: Re
         let cardId: number;
 
         if (!cardResult) {
-          // Insert new card
           const insertCard = await env.DB.prepare(
             `INSERT INTO cards (scryfall_id, name, set_code, set_name, collector_number, rarity) 
              VALUES (?, ?, ?, ?, ?, ?)`
@@ -339,14 +320,12 @@ async function handleInventoryImport(request: Request, env: Env, corsHeaders: Re
           cardId = cardResult.id;
         }
 
-        // Check if inventory entry exists for this card + condition + foil
         const existingInventory = await env.DB.prepare(
           `SELECT id, quantity FROM inventory 
            WHERE card_id = ? AND condition = ? AND language = ?`
         ).bind(cardId, mappedCondition, language).first<{ id: number; quantity: number }>();
 
         if (existingInventory) {
-          // Update existing inventory
           const newQty = existingInventory.quantity + quantity;
           await env.DB.prepare(
             `UPDATE inventory 
@@ -355,7 +334,6 @@ async function handleInventoryImport(request: Request, env: Env, corsHeaders: Re
           ).bind(newQty, sellPricePhp, costPricePhp, existingInventory.id).run();
           results.updated++;
         } else {
-          // Insert new inventory entry
           await env.DB.prepare(
             `INSERT INTO inventory (card_id, condition, language, quantity, cost_price, sell_price)
              VALUES (?, ?, ?, ?, ?, ?)`
@@ -380,7 +358,6 @@ async function handleInventoryImport(request: Request, env: Env, corsHeaders: Re
   }
 }
 
-// Helper to parse CSV line with proper quote handling
 function parseCSVLine(line: string): string[] {
   const result: string[] = [];
   let current = '';
@@ -401,6 +378,112 @@ function parseCSVLine(line: string): string[] {
   result.push(current);
   
   return result;
+}
+
+// ============================================
+// IMAGE FETCHING HANDLER
+// ============================================
+
+async function handleFetchImages(request: Request, env: Env, corsHeaders: Record<string, string>): Promise<Response> {
+  try {
+    // Auth check
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader) {
+      return jsonResponse({ error: 'Unauthorized' }, corsHeaders, 401);
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    let user: JWTPayload;
+    try {
+      user = JSON.parse(atob(token)) as JWTPayload;
+      if (user.exp < Date.now()) {
+        return jsonResponse({ error: 'Token expired' }, corsHeaders, 401);
+      }
+      if (user.role !== 'admin' && user.role !== 'staff') {
+        return jsonResponse({ error: 'Forbidden: Admin or staff role required' }, corsHeaders, 403);
+      }
+    } catch {
+      return jsonResponse({ error: 'Invalid token' }, corsHeaders, 401);
+    }
+
+    // Get cards without images (limit to 50 to avoid timeout)
+    const cards = await env.DB.prepare(
+      `SELECT id, scryfall_id, name FROM cards 
+       WHERE image_url IS NULL OR image_url = '' 
+       LIMIT 50`
+    ).all();
+
+    if (!cards.results || cards.results.length === 0) {
+      return jsonResponse({ 
+        message: 'All cards already have images!',
+        updated: 0 
+      }, corsHeaders);
+    }
+
+    const results = {
+      total: cards.results.length,
+      updated: 0,
+      failed: 0,
+      errors: [] as { cardId: number; cardName: string; message: string }[]
+    };
+
+    // Fetch images from Scryfall API
+    for (const card of cards.results as any[]) {
+      try {
+        // Respect Scryfall rate limit (50-100ms delay between requests)
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        const response = await fetch(`https://api.scryfall.com/cards/${card.scryfall_id}`);
+        
+        if (!response.ok) {
+          results.failed++;
+          results.errors.push({
+            cardId: card.id,
+            cardName: card.name,
+            message: `Scryfall API returned ${response.status}`
+          });
+          continue;
+        }
+
+        const data = await response.json() as any;
+        
+        // Get image URL (prefer normal size)
+        const imageUrl = data.image_uris?.normal || data.image_uris?.small || data.image_uris?.large || null;
+
+        if (imageUrl) {
+          // Update card with image URL
+          await env.DB.prepare(
+            'UPDATE cards SET image_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+          ).bind(imageUrl, card.id).run();
+          results.updated++;
+        } else {
+          results.failed++;
+          results.errors.push({
+            cardId: card.id,
+            cardName: card.name,
+            message: 'No image_uris found in Scryfall response'
+          });
+        }
+      } catch (error) {
+        results.failed++;
+        results.errors.push({
+          cardId: card.id,
+          cardName: card.name,
+          message: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    }
+
+    return jsonResponse({
+      message: `Fetched images for ${results.updated} cards`,
+      ...results
+    }, corsHeaders);
+  } catch (error) {
+    return jsonResponse({ 
+      error: 'Failed to fetch images', 
+      message: error instanceof Error ? error.message : String(error) 
+    }, corsHeaders, 500);
+  }
 }
 
 // ============================================
@@ -500,23 +583,19 @@ async function handleCreateOrder(request: Request, env: Env, corsHeaders: Record
       return jsonResponse({ error: 'Missing required fields' }, corsHeaders, 400);
     }
 
-    // Generate order number
     const orderNumber = `ORD-${Date.now()}`;
 
-    // Create order
     const orderResult = await env.DB.prepare(
       'INSERT INTO orders (customer_id, order_number, subtotal, total, payment_method, status) VALUES (?, ?, ?, ?, ?, ?)'
     ).bind(customerId, orderNumber, totalAmount, totalAmount, paymentMethod || 'cash', 'pending').run();
 
     const orderId = orderResult.meta.last_row_id;
 
-    // Insert order items
     for (const item of items) {
       await env.DB.prepare(
         'INSERT INTO order_items (order_id, inventory_id, quantity, unit_price, subtotal) VALUES (?, ?, ?, ?, ?)'
       ).bind(orderId, item.inventoryId, item.quantity, item.price, item.price * item.quantity).run();
 
-      // Update inventory
       await env.DB.prepare(
         'UPDATE inventory SET quantity = quantity - ? WHERE id = ?'
       ).bind(item.quantity, item.inventoryId).run();
