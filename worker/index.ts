@@ -415,7 +415,7 @@ async function handleGetInventory(request: Request, env: Env, corsHeaders: Recor
 
     const inventory = await env.DB.prepare(`
       SELECT 
-        i.id, i.quantity, i.condition, i.sell_price,
+        i.id, i.quantity, i.condition, i.sell_price as price_php,
         c.name, c.mana_cost, c.type_line, c.oracle_text, c.power, c.toughness,
         c.colors, c.set_code, c.set_name, c.rarity, c.image_url
       FROM inventory i
