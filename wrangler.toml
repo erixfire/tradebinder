@@ -3,34 +3,35 @@ main = "worker/index.ts"
 compatibility_date = "2026-02-26"
 
 # ============================================
-# CLOUDFLARE D1 DATABASE
+# SETUP INSTRUCTIONS (Follow in order!)
 # ============================================
-# Run: npx wrangler d1 create tradebinder-db
-# Then paste the database_id below
+# 1. Run: npx wrangler d1 create tradebinder-db
+# 2. Copy the database_id from output
+# 3. Paste it below in line 16
+# 4. Run: npx wrangler kv:namespace create "TRADEBINDER-CACHE"
+# 5. Copy the id from output
+# 6. Uncomment lines 25-27 below
+# 7. Paste the id in line 27
+# 8. Run: npm run db:migrate && npm run worker:dev
+# ============================================
 
 [[d1_databases]]
 binding = "DB"
 database_name = "tradebinder-db"
-database_id = ""  # <-- PASTE YOUR D1 DATABASE ID HERE
+database_id = ""  # <-- STEP 3: PASTE YOUR D1 DATABASE_ID HERE
 
 # ============================================
-# CLOUDFLARE KV CACHE
+# CLOUDFLARE KV CACHE (Uncomment after step 6)
 # ============================================
-# Run: npx wrangler kv:namespace create "TRADEBINDER-CACHE"
-# Then paste the id below
-
-[[kv_namespaces]]
-binding = "CACHE"
-id = ""  # <-- PASTE YOUR KV NAMESPACE ID HERE
+# Run step 4 first, then uncomment these 3 lines:
+# [[kv_namespaces]]
+# binding = "CACHE"
+# id = ""  # <-- STEP 7: PASTE YOUR KV NAMESPACE ID HERE
 
 # ============================================
 # ENVIRONMENT VARIABLES
 # ============================================
 [vars]
 ENVIRONMENT = "development"
-JWT_SECRET = "65de7410be32309fba0e6ad8df62be4aa33d639e7a7ea40394a80bf375730e6f"  # Change for production
+JWT_SECRET = "65de7410be32309fba0e6ad8df62be4aa33d639e7a7ea40394a80bf375730e6f"  # Change for production!
 SCRYFALL_API_URL = "https://api.scryfall.com"
-
-# ============================================
-# CORS is handled in worker code, not here
-# ============================================
