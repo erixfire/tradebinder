@@ -1,6 +1,8 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useState } from 'react';
 import './App.css';
+import Inventory from './pages/Inventory';
+import POS from './pages/POS';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787';
 
@@ -12,8 +14,8 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/inventory" element={<InventoryPage />} />
-          <Route path="/pos" element={<POSPage />} />
+          <Route path="/inventory" element={<Inventory />} />
+          <Route path="/pos" element={<POS />} />
           <Route path="/customers" element={<CustomersPage />} />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
@@ -98,15 +100,17 @@ function LoginPage() {
         body: JSON.stringify({ email, password }),
       });
 
+      const data = await response.json();
+
       if (response.ok) {
-        const data = await response.json();
         localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
         window.location.href = '/dashboard';
       } else {
-        setError('Invalid credentials');
+        setError(data.error || 'Login failed');
       }
     } catch (err) {
-      setError('Connection error. Check API URL: ' + API_URL);
+      setError('Connection error. API: ' + API_URL);
     } finally {
       setLoading(false);
     }
@@ -184,14 +188,6 @@ function StatCard({ title, value, icon }: any) {
       </div>
     </div>
   );
-}
-
-function InventoryPage() {
-  return <PlaceholderPage title="📦 Inventory" message="Card inventory management coming soon..." />;
-}
-
-function POSPage() {
-  return <PlaceholderPage title="🛒 Point of Sale" message="POS checkout system coming soon..." />;
 }
 
 function CustomersPage() {
