@@ -1,7 +1,7 @@
 /**
  * Cloudflare Workers API for TradeBinder
  * Complete MTG Card Trading Platform Backend
- * Updated: 2026-02-26 - Added image fetching endpoint
+ * Updated: 2026-02-26 - Added Scryfall image fetching (adapted from mtg-pos)
  */
 
 export interface Env {
@@ -18,6 +18,9 @@ interface JWTPayload {
   role: string;
   exp: number;
 }
+
+const SCRYFALL_API_BASE = 'https://api.scryfall.com';
+const RATE_LIMIT_DELAY = 100; // Scryfall requests 50-100ms between requests
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
@@ -77,7 +80,7 @@ export default {
         return handleGetCard(cardId, env, corsHeaders);
       }
 
-      // NEW: Fetch images endpoint
+      // NEW: Fetch images endpoint (adapted from mtg-pos sync-prices.js)
       if (path === '/api/cards/fetch-images' && method === 'POST') {
         return handleFetchImages(request, env, corsHeaders);
       }
@@ -381,8 +384,33 @@ function parseCSVLine(line: string): string[] {
 }
 
 // ============================================
-// IMAGE FETCHING HANDLER
+// IMAGE FETCHING HANDLER (Adapted from mtg-pos)
 // ============================================
+
+async function fetchScryfallData(scryfallId: string) {
+  try {
+    const url = `${SCRYFALL_API_BASE}/cards/${scryfallId}`;
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = await response.json() as any;
+    
+    // Get image URL (prefer normal size)
+    const imageUrl = data.image_uris?.normal || data.image_uris?.small || data.image_uris?.large || null;
+
+    return {
+      scryfallId: data.id,
+      name: data.name,
+      imageUrl
+    };
+  } catch (error) {
+    console.error('Error fetching Scryfall data:', error);
+    return null;
+  }
+}
 
 async function handleFetchImages(request: Request, env: Env, corsHeaders: Record<string, string>): Promise<Response> {
   try {
@@ -427,43 +455,40 @@ async function handleFetchImages(request: Request, env: Env, corsHeaders: Record
       errors: [] as { cardId: number; cardName: string; message: string }[]
     };
 
-    // Fetch images from Scryfall API
+    // Fetch images from Scryfall API (adapted from mtg-pos sync-prices.js pattern)
     for (const card of cards.results as any[]) {
       try {
-        // Respect Scryfall rate limit (50-100ms delay between requests)
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        const response = await fetch(`https://api.scryfall.com/cards/${card.scryfall_id}`);
-        
-        if (!response.ok) {
+        if (!card.scryfall_id) {
           results.failed++;
           results.errors.push({
             cardId: card.id,
             cardName: card.name,
-            message: `Scryfall API returned ${response.status}`
+            message: 'No Scryfall ID'
           });
           continue;
         }
 
-        const data = await response.json() as any;
+        // Fetch from Scryfall with rate limiting (same as mtg-pos)
+        const scryfallData = await fetchScryfallData(card.scryfall_id);
         
-        // Get image URL (prefer normal size)
-        const imageUrl = data.image_uris?.normal || data.image_uris?.small || data.image_uris?.large || null;
-
-        if (imageUrl) {
-          // Update card with image URL
-          await env.DB.prepare(
-            'UPDATE cards SET image_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-          ).bind(imageUrl, card.id).run();
-          results.updated++;
-        } else {
+        if (!scryfallData || !scryfallData.imageUrl) {
           results.failed++;
           results.errors.push({
             cardId: card.id,
             cardName: card.name,
-            message: 'No image_uris found in Scryfall response'
+            message: 'No image found on Scryfall'
           });
+        } else {
+          // Update card with image URL
+          await env.DB.prepare(
+            'UPDATE cards SET image_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+          ).bind(scryfallData.imageUrl, card.id).run();
+          results.updated++;
         }
+
+        // Rate limiting - Scryfall asks for 50-100ms delay (same as mtg-pos)
+        await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY));
+
       } catch (error) {
         results.failed++;
         results.errors.push({
