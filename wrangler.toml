@@ -3,27 +3,16 @@ main = "worker/index.ts"
 compatibility_date = "2026-02-26"
 
 # ============================================
-# SETUP INSTRUCTIONS - EXISTING D1 DATABASE
-# ============================================
-# You already have a D1 database!
-# 
-# 1. Get your database ID:
-#    npx wrangler d1 list
-# 
-# 2. Copy the database_id from the output
-# 
-# 3. Paste it below on line 20
-# 
-# 4. Deploy: npx wrangler deploy
+# D1 DATABASE CONFIGURATION
 # ============================================
 
 [[d1_databases]]
 binding = "DB"
 database_name = "tradebinder-db"
-database_id = ""  # <-- RUN: npx wrangler d1 list, THEN PASTE YOUR DATABASE_ID HERE
+database_id = "1d61e5ce-fd5a-4f29-92fb-cf449238baa0"
 
 # ============================================
-# KV NAMESPACE (Uncomment after creation)
+# KV NAMESPACE (Optional - for caching)
 # ============================================
 # After running: npx wrangler kv:namespace create "TRADEBINDER-CACHE"
 # Uncomment these 3 lines and paste your KV id:
