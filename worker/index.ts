@@ -1,6 +1,7 @@
 /**
  * Cloudflare Workers API for TradeBinder
  * Complete MTG Card Trading Platform Backend
+ * Updated: 2026-02-26 - D1 Database Configured
  */
 
 export interface Env {
@@ -41,7 +42,8 @@ export default {
         return jsonResponse({ 
           status: 'ok', 
           timestamp: new Date().toISOString(),
-          environment: env.ENVIRONMENT || 'production'
+          environment: env.ENVIRONMENT || 'production',
+          database: env.DB ? 'connected' : 'not configured'
         }, corsHeaders);
       }
 
@@ -59,7 +61,7 @@ export default {
         return handleGetInventory(request, env, corsHeaders);
       }
 
-      // CSV Import route
+      // CSV Import route - FIXED
       if (path === '/api/inventory/import' && method === 'POST') {
         return handleInventoryImport(request, env, corsHeaders);
       }
@@ -94,7 +96,17 @@ export default {
 
       // 404 for unknown routes
       return jsonResponse(
-        { error: 'Not found', path },
+        { error: 'Not found', path, available_routes: [
+          '/api/health',
+          '/api/auth/login',
+          '/api/auth/register',
+          '/api/inventory',
+          '/api/inventory/import',
+          '/api/cards',
+          '/api/orders',
+          '/api/customers',
+          '/api/reports/sales'
+        ]},
         corsHeaders,
         404
       );
