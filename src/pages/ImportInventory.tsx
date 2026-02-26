@@ -1,4 +1,5 @@
 import { useState, FormEvent } from 'react';
+import Navigation from '../components/Navigation';
 import './ImportInventory.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787';
@@ -63,121 +64,185 @@ export default function ImportInventory() {
   };
 
   return (
-    <div className="import-page">
-      <header className="page-header">
-        <h1>📥 Import Inventory</h1>
-        <a href="/inventory" className="btn-secondary">← Back to Inventory</a>
-      </header>
+    <>
+      <Navigation />
+      <div className="import-page">
+        <header className="page-header">
+          <h1>📥 Import Inventory</h1>
+          <p className="page-subtitle">Bulk import your MTG collection from ManaBox CSV</p>
+        </header>
 
-      <main className="import-content">
-        <div className="import-card">
-          <h2>ManaBox CSV Import</h2>
-          <p className="import-description">
-            Upload a CSV file exported from ManaBox to bulk import your MTG card inventory.
-          </p>
-
-          <div className="format-info">
-            <h3>Expected CSV Format:</h3>
-            <p>Your CSV should include these columns from ManaBox:</p>
-            <ul>
-              <li><strong>Name</strong> - Card name (required)</li>
-              <li><strong>Set code</strong> - Set abbreviation (required)</li>
-              <li><strong>Scryfall ID</strong> - Unique card identifier (required)</li>
-              <li><strong>Quantity</strong> - Number of cards (required)</li>
-              <li><strong>Condition</strong> - Card condition (required)</li>
-              <li><strong>Foil</strong> - "foil" or "normal"</li>
-              <li><strong>Language</strong> - Language code (e.g., "en")</li>
-              <li><strong>Purchase price</strong> - Cost per card</li>
-              <li><strong>Set name</strong>, <strong>Collector number</strong>, <strong>Rarity</strong> - Additional info</li>
-            </ul>
-            <p className="note">
-              <strong>Note:</strong> Cards will be priced at 1.5x the purchase price by default. 
-              You can adjust prices later in the inventory page.
-            </p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="import-form">
-            <div className="file-input-container">
-              <label htmlFor="csv-file" className="file-label">
-                {file ? `📄 ${file.name}` : '📁 Choose CSV File'}
-              </label>
-              <input
-                id="csv-file"
-                type="file"
-                accept=".csv"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
-                className="file-input"
-              />
+        <main className="import-content">
+          <div className="import-card">
+            <div className="card-header">
+              <h2>📊 ManaBox CSV Import</h2>
+              <p>Upload your collection data and let us handle the rest</p>
             </div>
 
-            <button
-              type="submit"
-              disabled={!file || loading}
-              className="btn-primary"
-            >
-              {loading ? '⏳ Importing...' : '🚀 Import CSV'}
-            </button>
-          </form>
-
-          {error && (
-            <div className="alert alert-error">
-              <strong>❌ Error:</strong> {error}
-            </div>
-          )}
-
-          {result && (
-            <div className="import-results">
-              <h3>✅ Import Complete</h3>
-              <div className="results-grid">
-                <div className="result-stat">
-                  <span className="stat-label">Total Rows:</span>
-                  <span className="stat-value">{result.total}</span>
+            <div className="format-info">
+              <h3>📋 Required CSV Columns</h3>
+              <div className="column-grid">
+                <div className="column-item required">
+                  <span className="column-icon">✅</span>
+                  <strong>Name</strong> - Card name
                 </div>
-                <div className="result-stat success">
-                  <span className="stat-label">Inserted:</span>
-                  <span className="stat-value">{result.inserted}</span>
+                <div className="column-item required">
+                  <span className="column-icon">✅</span>
+                  <strong>Set code</strong> - Set abbreviation
                 </div>
-                <div className="result-stat info">
-                  <span className="stat-label">Updated:</span>
-                  <span className="stat-value">{result.updated}</span>
+                <div className="column-item required">
+                  <span className="column-icon">✅</span>
+                  <strong>Scryfall ID</strong> - Unique identifier
                 </div>
-                <div className="result-stat warning">
-                  <span className="stat-label">Skipped:</span>
-                  <span className="stat-value">{result.skipped}</span>
+                <div className="column-item required">
+                  <span className="column-icon">✅</span>
+                  <strong>Quantity</strong> - Number of cards
+                </div>
+                <div className="column-item required">
+                  <span className="column-icon">✅</span>
+                  <strong>Condition</strong> - Card condition
+                </div>
+                <div className="column-item optional">
+                  <span className="column-icon">⭐</span>
+                  <strong>Foil</strong> - foil/normal
+                </div>
+                <div className="column-item optional">
+                  <span className="column-icon">⭐</span>
+                  <strong>Purchase price</strong> - Cost per card
+                </div>
+                <div className="column-item optional">
+                  <span className="column-icon">⭐</span>
+                  <strong>Language</strong> - Language code
                 </div>
               </div>
+              <div className="pricing-note">
+                💰 <strong>Auto-pricing:</strong> Cards are priced at 1.5x purchase price by default
+              </div>
+            </div>
 
-              {result.errors.length > 0 && (
-                <div className="errors-section">
-                  <h4>⚠️ Errors ({result.errors.length}):</h4>
-                  <ul className="error-list">
-                    {result.errors.slice(0, 20).map((err, idx) => (
-                      <li key={idx}>
-                        <strong>Row {err.row}:</strong> {err.message}
-                      </li>
-                    ))}
-                  </ul>
-                  {result.errors.length > 20 && (
-                    <p className="more-errors">
-                      ...and {result.errors.length - 20} more errors
-                    </p>
+            <form onSubmit={handleSubmit} className="import-form">
+              <div className="file-input-container">
+                <input
+                  id="csv-file"
+                  type="file"
+                  accept=".csv"
+                  onChange={(e) => setFile(e.target.files?.[0] || null)}
+                  className="file-input"
+                />
+                <label htmlFor="csv-file" className="file-label">
+                  {file ? (
+                    <>
+                      <span className="file-icon">📄</span>
+                      <span className="file-name">{file.name}</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="upload-icon">📁</span>
+                      <span>Click to choose CSV file or drag & drop</span>
+                    </>
                   )}
-                </div>
-              )}
-
-              <div className="result-actions">
-                <a href="/inventory" className="btn-primary">View Inventory</a>
-                <button 
-                  onClick={() => { setResult(null); setFile(null); }}
-                  className="btn-secondary"
-                >
-                  Import Another File
-                </button>
+                </label>
               </div>
-            </div>
-          )}
-        </div>
-      </main>
-    </div>
+
+              <button
+                type="submit"
+                disabled={!file || loading}
+                className="btn-import"
+              >
+                {loading ? (
+                  <>
+                    <span className="spinner"></span>
+                    Importing...
+                  </>
+                ) : (
+                  <>
+                    <span>🚀</span>
+                    Import CSV
+                  </>
+                )}
+              </button>
+            </form>
+
+            {error && (
+              <div className="alert alert-error">
+                <span className="alert-icon">❌</span>
+                <div>
+                  <strong>Import Failed</strong>
+                  <p>{error}</p>
+                </div>
+              </div>
+            )}
+
+            {result && (
+              <div className="import-results">
+                <div className="results-header">
+                  <span className="success-icon">✅</span>
+                  <h3>Import Complete!</h3>
+                </div>
+                
+                <div className="results-grid">
+                  <div className="result-stat total">
+                    <span className="stat-icon">📊</span>
+                    <div>
+                      <span className="stat-label">Total Rows</span>
+                      <span className="stat-value">{result.total}</span>
+                    </div>
+                  </div>
+                  <div className="result-stat success">
+                    <span className="stat-icon">➕</span>
+                    <div>
+                      <span className="stat-label">Inserted</span>
+                      <span className="stat-value">{result.inserted}</span>
+                    </div>
+                  </div>
+                  <div className="result-stat info">
+                    <span className="stat-icon">🔄</span>
+                    <div>
+                      <span className="stat-label">Updated</span>
+                      <span className="stat-value">{result.updated}</span>
+                    </div>
+                  </div>
+                  <div className="result-stat warning">
+                    <span className="stat-icon">⚠️</span>
+                    <div>
+                      <span className="stat-label">Skipped</span>
+                      <span className="stat-value">{result.skipped}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {result.errors.length > 0 && (
+                  <div className="errors-section">
+                    <h4>⚠️ Errors ({result.errors.length})</h4>
+                    <div className="error-list">
+                      {result.errors.slice(0, 10).map((err, idx) => (
+                        <div key={idx} className="error-item">
+                          <span className="error-row">Row {err.row}</span>
+                          <span className="error-message">{err.message}</span>
+                        </div>
+                      ))}
+                    </div>
+                    {result.errors.length > 10 && (
+                      <p className="more-errors">
+                        + {result.errors.length - 10} more errors
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                <div className="result-actions">
+                  <button 
+                    onClick={() => { setResult(null); setFile(null); }}
+                    className="btn-secondary"
+                  >
+                    🔄 Import Another
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </main>
+      </div>
+    </>
   );
 }
