@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import Navigation from '../components/Navigation';
 import './Inventory.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787';
@@ -58,130 +59,150 @@ export default function Inventory() {
 
   if (loading) {
     return (
-      <div className="inventory-page">
-        <div className="loading">Loading inventory...</div>
-      </div>
+      <>
+        <Navigation />
+        <div className="inventory-page">
+          <div className="loading-container">
+            <div className="loading-spinner"></div>
+            <p>Loading inventory...</p>
+          </div>
+        </div>
+      </>
     );
   }
 
   return (
-    <div className="inventory-page">
-      <header className="page-header">
-        <div className="header-content">
-          <h1>📦 Inventory Management</h1>
-          <div className="header-stats">
-            <div className="stat">
-              <span className="stat-label">Total Cards</span>
-              <span className="stat-value">{totalCards}</span>
-            </div>
-            <div className="stat">
-              <span className="stat-label">Total Value</span>
-              <span className="stat-value">₱{totalValue.toLocaleString()}</span>
-            </div>
-            <div className="stat">
-              <span className="stat-label">Unique Cards</span>
-              <span className="stat-value">{filteredInventory.length}</span>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <div className="inventory-content">
-        <div className="controls">
-          <div className="search-box">
-            <input
-              type="text"
-              placeholder="🔍 Search cards by name or type..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-          <div className="filter-buttons">
-            <button
-              className={filter === 'all' ? 'active' : ''}
-              onClick={() => setFilter('all')}
-            >
-              All
-            </button>
-            <button
-              className={filter === 'common' ? 'active' : ''}
-              onClick={() => setFilter('common')}
-            >
-              Common
-            </button>
-            <button
-              className={filter === 'uncommon' ? 'active' : ''}
-              onClick={() => setFilter('uncommon')}
-            >
-              Uncommon
-            </button>
-            <button
-              className={filter === 'rare' ? 'active' : ''}
-              onClick={() => setFilter('rare')}
-            >
-              Rare
-            </button>
-            <button
-              className={filter === 'mythic' ? 'active' : ''}
-              onClick={() => setFilter('mythic')}
-            >
-              Mythic
-            </button>
-          </div>
-        </div>
-
-        <div className="inventory-grid">
-          {filteredInventory.map((item) => (
-            <div key={item.id} className="card-item">
-              <div className="card-image">
-                {item.image_url ? (
-                  <img src={item.image_url} alt={item.name} />
-                ) : (
-                  <div className="no-image">🃏</div>
-                )}
-                <div className="rarity-badge" data-rarity={item.rarity}>
-                  {item.rarity}
+    <>
+      <Navigation />
+      <div className="inventory-page">
+        <header className="page-header">
+          <div className="header-content">
+            <h1>📦 Inventory Management</h1>
+            <div className="header-stats">
+              <div className="stat-card">
+                <span className="stat-icon">🃏</span>
+                <div>
+                  <span className="stat-label">Total Cards</span>
+                  <span className="stat-value">{totalCards.toLocaleString()}</span>
                 </div>
               </div>
-              <div className="card-details">
-                <h3>{item.name}</h3>
-                <p className="mana-cost">{item.mana_cost || 'N/A'}</p>
-                <p className="type-line">{item.type_line}</p>
-                <div className="card-stats">
-                  <span className="set">{item.set_code.toUpperCase()}</span>
-                  {item.power && item.toughness && (
-                    <span className="power-toughness">{item.power}/{item.toughness}</span>
+              <div className="stat-card">
+                <span className="stat-icon">💰</span>
+                <div>
+                  <span className="stat-label">Total Value</span>
+                  <span className="stat-value">₱{totalValue.toLocaleString()}</span>
+                </div>
+              </div>
+              <div className="stat-card">
+                <span className="stat-icon">✨</span>
+                <div>
+                  <span className="stat-label">Unique Cards</span>
+                  <span className="stat-value">{filteredInventory.length}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <div className="inventory-content">
+          <div className="controls">
+            <div className="search-box">
+              <span className="search-icon">🔍</span>
+              <input
+                type="text"
+                placeholder="Search cards by name or type..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <div className="filter-buttons">
+              <button
+                className={filter === 'all' ? 'active' : ''}
+                onClick={() => setFilter('all')}
+              >
+                All Rarities
+              </button>
+              <button
+                className={filter === 'common' ? 'active' : ''}
+                onClick={() => setFilter('common')}
+              >
+                Common
+              </button>
+              <button
+                className={filter === 'uncommon' ? 'active' : ''}
+                onClick={() => setFilter('uncommon')}
+              >
+                Uncommon
+              </button>
+              <button
+                className={filter === 'rare' ? 'active' : ''}
+                onClick={() => setFilter('rare')}
+              >
+                Rare
+              </button>
+              <button
+                className={filter === 'mythic' ? 'active' : ''}
+                onClick={() => setFilter('mythic')}
+              >
+                Mythic
+              </button>
+            </div>
+          </div>
+
+          <div className="inventory-grid">
+            {filteredInventory.map((item) => (
+              <div key={item.id} className="card-item">
+                <div className="card-image">
+                  {item.image_url ? (
+                    <img src={item.image_url} alt={item.name} loading="lazy" />
+                  ) : (
+                    <div className="no-image">
+                      <span>🃏</span>
+                      <p>No Image</p>
+                    </div>
                   )}
+                  <div className="rarity-badge" data-rarity={item.rarity}>
+                    {item.rarity}
+                  </div>
                 </div>
-                <div className="inventory-info">
-                  <div className="info-row">
-                    <span>Quantity:</span>
-                    <strong>{item.quantity}</strong>
+                <div className="card-details">
+                  <h3 className="card-name">{item.name}</h3>
+                  <p className="mana-cost">{item.mana_cost || '—'}</p>
+                  <p className="type-line">{item.type_line}</p>
+                  <div className="card-meta">
+                    <span className="set-badge">{item.set_code.toUpperCase()}</span>
+                    {item.power && item.toughness && (
+                      <span className="pt-badge">{item.power}/{item.toughness}</span>
+                    )}
                   </div>
-                  <div className="info-row">
-                    <span>Condition:</span>
-                    <strong>{item.condition}</strong>
-                  </div>
-                  <div className="info-row price">
-                    <span>Price:</span>
-                    <strong>₱{item.price_php.toLocaleString()}</strong>
+                  <div className="inventory-info">
+                    <div className="info-row">
+                      <span className="info-label">Qty</span>
+                      <span className="info-value">{item.quantity}</span>
+                    </div>
+                    <div className="info-row">
+                      <span className="info-label">Condition</span>
+                      <span className="info-value condition-badge">{item.condition}</span>
+                    </div>
+                    <div className="info-row price-row">
+                      <span className="info-label">Price</span>
+                      <span className="info-value price">₱{item.price_php.toLocaleString()}</span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
-
-        {filteredInventory.length === 0 && (
-          <div className="empty-state">
-            <div className="empty-icon">📭</div>
-            <h3>No cards found</h3>
-            <p>Try adjusting your search or filters</p>
+            ))}
           </div>
-        )}
-      </div>
 
-      <a href="/dashboard" className="back-link">← Back to Dashboard</a>
-    </div>
+          {filteredInventory.length === 0 && (
+            <div className="empty-state">
+              <div className="empty-icon">📭</div>
+              <h3>No cards found</h3>
+              <p>Try adjusting your search or filters</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
   );
 }
