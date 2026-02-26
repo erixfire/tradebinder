@@ -4,6 +4,7 @@ import './App.css';
 import Inventory from './pages/Inventory';
 import POS from './pages/POS';
 import Trading from './pages/Trading';
+import ImportInventory from './pages/ImportInventory';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787';
 
@@ -16,6 +17,7 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/inventory" element={<Inventory />} />
+          <Route path="/inventory/import" element={<ImportInventory />} />
           <Route path="/pos" element={<POS />} />
           <Route path="/trading" element={<Trading />} />
           <Route path="/customers" element={<CustomersPage />} />
@@ -162,6 +164,7 @@ function Dashboard() {
         <h1>📊 Dashboard</h1>
         <nav className="dashboard-nav">
           <a href="/inventory">Inventory</a>
+          <a href="/inventory/import">Import CSV</a>
           <a href="/pos">POS</a>
           <a href="/trading">Trading</a>
           <a href="/reports">Reports</a>
