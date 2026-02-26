@@ -1,46 +1,213 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { useState } from 'react';
 import './App.css';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787';
 
 function App() {
   return (
     <Router>
       <div className="app">
-        <header className="app-header">
-          <h1>🃏 TradeBinder</h1>
-          <p>MTG Card Trading Platform</p>
-        </header>
-        <main className="app-main">
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            {/* Add more routes as features are built */}
-          </Routes>
-        </main>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/inventory" element={<InventoryPage />} />
+          <Route path="/pos" element={<POSPage />} />
+          <Route path="/customers" element={<CustomersPage />} />
+          <Route path="/reports" element={<ReportsPage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       </div>
     </Router>
   );
 }
 
-function HomePage() {
+function LandingPage() {
   return (
-    <div className="home-page">
-      <h2>Welcome to TradeBinder</h2>
-      <p>Your MTG card inventory and trading platform is under construction.</p>
-      <div className="features-grid">
-        <FeatureCard title="Inventory" emoji="📦" status="Coming Soon" />
-        <FeatureCard title="POS" emoji="🛒" status="Coming Soon" />
-        <FeatureCard title="Customers" emoji="👤" status="Coming Soon" />
-        <FeatureCard title="Reports" emoji="📊" status="Coming Soon" />
+    <div className="landing-page">
+      <header className="app-header">
+        <h1>🃏 TradeBinder</h1>
+        <p>MTG Card Trading Platform</p>
+        <div className="header-actions">
+          <a href="/login" className="btn-primary">Login</a>
+          <a href="/dashboard" className="btn-secondary">Dashboard</a>
+        </div>
+      </header>
+      <main className="app-main">
+        <div className="features-grid">
+          <FeatureCard 
+            title="Inventory" 
+            emoji="📦" 
+            description="Manage 200+ MTG cards"
+            link="/inventory"
+          />
+          <FeatureCard 
+            title="POS" 
+            emoji="🛒" 
+            description="Quick checkout system"
+            link="/pos"
+          />
+          <FeatureCard 
+            title="Customers" 
+            emoji="👥" 
+            description="Customer management"
+            link="/customers"
+          />
+          <FeatureCard 
+            title="Reports" 
+            emoji="📊" 
+            description="Sales analytics"
+            link="/reports"
+          />
+        </div>
+        <div className="api-status">
+          <p>API: {API_URL}</p>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+function FeatureCard({ title, emoji, description, link }: any) {
+  return (
+    <a href={link} className="feature-card">
+      <div className="feature-emoji">{emoji}</div>
+      <h3>{title}</h3>
+      <p className="feature-description">{description}</p>
+      <span className="feature-link">View →</span>
+    </a>
+  );
+}
+
+function LoginPage() {
+  const [email, setEmail] = useState('admin@tradebinder.com');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch(`${API_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        localStorage.setItem('token', data.token);
+        window.location.href = '/dashboard';
+      } else {
+        setError('Invalid credentials');
+      }
+    } catch (err) {
+      setError('Connection error. Check API URL: ' + API_URL);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="login-page">
+      <div className="login-container">
+        <h1>🃏 TradeBinder Login</h1>
+        <form onSubmit={handleLogin} className="login-form">
+          <div className="form-group">
+            <label>Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="admin@tradebinder.com"
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label>Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter password"
+              required
+            />
+          </div>
+          {error && <div className="error-message">{error}</div>}
+          <button type="submit" disabled={loading} className="btn-primary">
+            {loading ? 'Logging in...' : 'Login'}
+          </button>
+          <p className="hint">Default: admin@tradebinder.com / admin123</p>
+        </form>
+        <a href="/" className="back-link">← Back to Home</a>
       </div>
     </div>
   );
 }
 
-function FeatureCard({ title, emoji, status }: { title: string; emoji: string; status: string }) {
+function Dashboard() {
   return (
-    <div className="feature-card">
-      <div className="feature-emoji">{emoji}</div>
-      <h3>{title}</h3>
-      <span className="feature-status">{status}</span>
+    <div className="dashboard-page">
+      <header className="dashboard-header">
+        <h1>📊 Dashboard</h1>
+        <nav className="dashboard-nav">
+          <a href="/inventory">Inventory</a>
+          <a href="/pos">POS</a>
+          <a href="/customers">Customers</a>
+          <a href="/reports">Reports</a>
+          <a href="/">Logout</a>
+        </nav>
+      </header>
+      <main className="dashboard-content">
+        <div className="stats-grid">
+          <StatCard title="Total Cards" value="342" icon="🃏" />
+          <StatCard title="Inventory Value" value="₱45,230" icon="💰" />
+          <StatCard title="Orders" value="127" icon="📦" />
+          <StatCard title="Customers" value="15" icon="👥" />
+        </div>
+      </main>
+    </div>
+  );
+}
+
+function StatCard({ title, value, icon }: any) {
+  return (
+    <div className="stat-card">
+      <div className="stat-icon">{icon}</div>
+      <div className="stat-info">
+        <h3>{title}</h3>
+        <p className="stat-value">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+function InventoryPage() {
+  return <PlaceholderPage title="📦 Inventory" message="Card inventory management coming soon..." />;
+}
+
+function POSPage() {
+  return <PlaceholderPage title="🛒 Point of Sale" message="POS checkout system coming soon..." />;
+}
+
+function CustomersPage() {
+  return <PlaceholderPage title="👥 Customers" message="Customer management coming soon..." />;
+}
+
+function ReportsPage() {
+  return <PlaceholderPage title="📊 Reports" message="Sales analytics coming soon..." />;
+}
+
+function PlaceholderPage({ title, message }: any) {
+  return (
+    <div className="placeholder-page">
+      <h1>{title}</h1>
+      <p>{message}</p>
+      <a href="/dashboard" className="btn-primary">← Back to Dashboard</a>
     </div>
   );
 }
