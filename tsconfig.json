@@ -15,18 +15,12 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "types": ["@cloudflare/workers-types"],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "@components/*": ["./src/components/*"],
-      "@pages/*": ["./src/pages/*"],
-      "@hooks/*": ["./src/hooks/*"],
-      "@store/*": ["./src/store/*"],
-      "@utils/*": ["./src/utils/*"],
-      "@types/*": ["./src/types/*"]
-    }
+      "@/*": ["./src/*"]
+    },
+    "types": ["@cloudflare/workers-types"]
   },
-  "include": ["src", "workers"],
+  "include": ["src", "worker"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

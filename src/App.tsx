@@ -1,41 +1,47 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { useAuthStore } from '@store/authStore';
-import Layout from '@components/layout/Layout';
-import Home from '@pages/Home';
-import Login from '@pages/Login';
-import Register from '@pages/Register';
-import Dashboard from '@pages/Dashboard';
-import Cards from '@pages/Cards';
-import CardDetail from '@pages/CardDetail';
-import Inventory from '@pages/Inventory';
-import Orders from '@pages/Orders';
-import OrderDetail from '@pages/OrderDetail';
-import Wishlist from '@pages/Wishlist';
-import Profile from '@pages/Profile';
-import POS from '@pages/POS';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import './App.css';
 
 function App() {
-  const { isAuthenticated } = useAuthStore();
-
   return (
-    <Routes>
-      <Route path="/" element={<Layout />}>
-        <Route index element={<Home />} />
-        <Route path="login" element={!isAuthenticated ? <Login /> : <Navigate to="/dashboard" />} />
-        <Route path="register" element={!isAuthenticated ? <Register /> : <Navigate to="/dashboard" />} />
-        
-        {/* Protected Routes */}
-        <Route path="dashboard" element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" />} />
-        <Route path="cards" element={<Cards />} />
-        <Route path="cards/:id" element={<CardDetail />} />
-        <Route path="inventory" element={isAuthenticated ? <Inventory /> : <Navigate to="/login" />} />
-        <Route path="orders" element={isAuthenticated ? <Orders /> : <Navigate to="/login" />} />
-        <Route path="orders/:id" element={isAuthenticated ? <OrderDetail /> : <Navigate to="/login" />} />
-        <Route path="wishlist" element={isAuthenticated ? <Wishlist /> : <Navigate to="/login" />} />
-        <Route path="profile" element={isAuthenticated ? <Profile /> : <Navigate to="/login" />} />
-        <Route path="pos" element={isAuthenticated ? <POS /> : <Navigate to="/login" />} />
-      </Route>
-    </Routes>
+    <Router>
+      <div className="app">
+        <header className="app-header">
+          <h1>🃏 TradeBinder</h1>
+          <p>MTG Card Trading Platform</p>
+        </header>
+        <main className="app-main">
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            {/* Add more routes as features are built */}
+          </Routes>
+        </main>
+      </div>
+    </Router>
+  );
+}
+
+function HomePage() {
+  return (
+    <div className="home-page">
+      <h2>Welcome to TradeBinder</h2>
+      <p>Your MTG card inventory and trading platform is under construction.</p>
+      <div className="features-grid">
+        <FeatureCard title="Inventory" emoji="📦" status="Coming Soon" />
+        <FeatureCard title="POS" emoji="🛒" status="Coming Soon" />
+        <FeatureCard title="Customers" emoji="👤" status="Coming Soon" />
+        <FeatureCard title="Reports" emoji="📊" status="Coming Soon" />
+      </div>
+    </div>
+  );
+}
+
+function FeatureCard({ title, emoji, status }: { title: string; emoji: string; status: string }) {
+  return (
+    <div className="feature-card">
+      <div className="feature-emoji">{emoji}</div>
+      <h3>{title}</h3>
+      <span className="feature-status">{status}</span>
+    </div>
   );
 }
 
